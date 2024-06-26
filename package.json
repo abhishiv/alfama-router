@@ -1,0 +1,47 @@
+{
+  "name": "alfama-router",
+  "version": "0.2.6",
+  "author": "Abhishiv Saxena<abhishiv@gmail.com>",
+  "license": "MIT",
+  "description": "alfama router",
+  "keywords": [
+    "alfama",
+    "router",
+    "framework"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abhishiv/alfama-router"
+  },
+  "files": [
+    "./dist"
+  ],
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "vite": "^5.1.5",
+    "vitest": "^0.28.5"
+  },
+  "scripts": {
+    "build": "npx tsc --resolveJsonModule -p ./tsconfig.json --outDir ./dist/esm && npx tsc --resolveJsonModule -p ./tsconfig.json --module commonjs --outDir ./dist/cjs",
+    "test": "npx vitest --run --passWithNoTests",
+    "coverage": "vitest run --coverage --run --passWithNoTests",
+    "typecheck": "npx tsc --noEmit"
+  },
+  "main": "./src/index.tsx",
+  "exports": {
+    ".": {
+      "import": "./src/index.tsx",
+      "require": "./src/index.tsx"
+    },
+    "./example": {
+      "import": "./src/example.tsx",
+      "require": "./src/example.tsx"
+    }
+  },
+  "dependencies": {
+    "path-to-regexp": "^6.2.1"
+  },
+  "peerDependencies": {
+    "alfama": "*"
+  }
+}
