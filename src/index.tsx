@@ -83,7 +83,7 @@ export const Route = component<{
     {
       get: function (obj, prop) {
         const ownerRoute = $ownerRoute.get();
-        //console.log("alfama.Router.Route", props, ownerRoute);
+        //console.log("alfama.Router.Route", props, ownerRoute, prop);
         if (!ownerRoute && !props.path) {
           //console.log("owner", props);
           return () => {
@@ -101,7 +101,7 @@ export const Route = component<{
   );
   return (
     <When
-      condition={($) => $ownerRoute.get($)?.pathname as string}
+      condition={($) => $ownerRoute.get($)?.realpath as string}
       views={views}
     ></When>
   );
@@ -142,7 +142,7 @@ export const Switch = component(
       pathname?: string;
     }) => {
       const { route, params, pathname } = attrs || {};
-      //console.log("updateActiveRoute", route, pathname);
+      //console.log("updateActiveRoute", attrs);
       if (route && pathname) {
         const currentRoute: ParentRouteObject = {
           pathname: route.path,
