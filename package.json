@@ -1,6 +1,6 @@
 {
   "name": "alfama-router",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Abhishiv Saxena<abhishiv@gmail.com>",
   "license": "MIT",
   "description": "alfama router",
@@ -18,8 +18,8 @@
   ],
   "devDependencies": {
     "typescript": "^5.2.2",
-    "vite": "^5.1.5",
-    "vitest": "^0.28.5"
+    "vitest": "^2.0.5",
+    "vitest": "^2.0.5"
   },
   "scripts": {
     "build": "npx tsc --resolveJsonModule -p ./tsconfig.json --outDir ./dist/esm && npx tsc --resolveJsonModule -p ./tsconfig.json --module commonjs --outDir ./dist/cjs",
@@ -27,6 +27,7 @@
     "coverage": "vitest run --coverage --run --passWithNoTests",
     "typecheck": "npx tsc --noEmit"
   },
+  "sideEffects": false,
   "main": "./src/index.tsx",
   "exports": {
     ".": {

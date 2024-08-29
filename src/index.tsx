@@ -8,6 +8,7 @@ import {
   Component,
   When,
   Signal,
+  Fragment,
 } from "alfama";
 import { Key, pathToRegexp } from "path-to-regexp";
 //import { parse } from "regexparam";
@@ -16,6 +17,7 @@ export * from "path-to-regexp";
 export type ParentRouteObject =
   | {
       pathname: string;
+      realpath: string;
       parent: ParentRouteObject;
       params: Record<string, string>;
     }
@@ -29,7 +31,7 @@ export const ParentRouteContext =
 export type History = typeof window.history;
 export type Location = typeof window.location;
 
-class RouterObject extends EventTarget {
+export class RouterObject extends EventTarget {
   history: History;
   location: Location;
   constructor(history: History, location: Location) {
@@ -43,7 +45,7 @@ class RouterObject extends EventTarget {
     }
   }
   pushState(state: Record<string, any>, empty: "", path: string) {
-    this.history.pushState(state, empty, path);
+    this.history.pushState({ ...state, t: Date.now() }, empty, path);
     this.dispatchEvent(new Event("popstate"));
   }
   navigate(path: string) {
@@ -75,13 +77,32 @@ export const Route = component<{
   component: Component<any> | h.JSX.Element;
 }>("alfama.Router.Route", (props, { signal, wire, getContext, utils }) => {
   const $ownerRoute = getContext(ParentRouteContext);
+  //console.log($ownerRoute.get());
+  const views = new Proxy(
+    {},
+    {
+      get: function (obj, prop) {
+        const ownerRoute = $ownerRoute.get();
+        //console.log("alfama.Router.Route", props, ownerRoute);
+        if (!ownerRoute && !props.path) {
+          //console.log("owner", props);
+          return () => {
+            return h(props.component as any);
+          };
+        } else if (ownerRoute && ownerRoute.pathname === props.path) {
+          return () => {
+            return h(props.component as any);
+          };
+        } else {
+          return () => null;
+        }
+      },
+    }
+  );
   return (
     <When
-      condition={($) => $ownerRoute($)?.pathname === props.path}
-      views={{
-        true: () => h(props.component as any),
-        false: () => null,
-      }}
+      condition={($) => $ownerRoute.get($)?.pathname as string}
+      views={views}
     ></When>
   );
 });
@@ -89,7 +110,7 @@ export const Route = component<{
 export const Switch = component(
   "alfama.Router.Switch",
   (
-    props: { children: VElement[]; onChange?: Function },
+    props: { children: VElement | VElement[]; onChange?: Function },
     { signal, wire, getContext, setContext, utils, onUnmount }
   ) => {
     const $activeRoute = signal<null | any>("active", null);
@@ -98,44 +119,52 @@ export const Switch = component(
     setContext(ParentRouteContext, $activeRoute);
 
     const $router = getContext(RouterContext);
-    const router = $router();
+    const router = $router.get();
 
-    const routes = props.children
+    const routes = (
+      props.children
+        ? Array.isArray(props.children)
+          ? props.children
+          : [props.children]
+        : []
+    )
       .map((el) => ({
         path: (el as any)?.p?.path,
         component: (el as any)?.p?.component,
       }))
       .filter((el) => el.component);
 
-    //    console.log("routes", routes);
+    //console.log("routes", routes);
 
-    const updateActiveRoute = ({
-      route,
-      params,
-    }: {
+    const updateActiveRoute = (attrs?: {
       route?: { path: string };
       params?: Record<string, string>;
-    } = {}) => {
-      //console.log("updateActiveRoute", route);
-      if (route) {
+      pathname?: string;
+    }) => {
+      const { route, params, pathname } = attrs || {};
+      //console.log("updateActiveRoute", route, pathname);
+      if (route && pathname) {
         const currentRoute: ParentRouteObject = {
           pathname: route.path,
+          realpath: pathname,
           params: params || {},
-          parent: $ownerRoute ? $ownerRoute() : undefined,
+          parent: $ownerRoute ? $ownerRoute.get() : undefined,
         };
-        $activeRoute(currentRoute);
-        //console.log($activeRoute());
+        $activeRoute.set(currentRoute);
+        //console.log("$activeRoute", $activeRoute.get());
         if (props.onChange) props.onChange(currentRoute);
+      } else {
+        $activeRoute.set(null);
       }
     };
     const onPopstate = () => {
       updateActiveRoute(
-        matchRoutes($ownerRoute ? $ownerRoute() : undefined, router, routes)
+        matchRoutes($ownerRoute ? $ownerRoute.get() : undefined, router, routes)
       );
     };
     router.addEventListener("popstate", onPopstate);
     updateActiveRoute(
-      matchRoutes($ownerRoute ? $ownerRoute() : undefined, router, routes)
+      matchRoutes($ownerRoute ? $ownerRoute.get() : undefined, router, routes)
     );
     onUnmount(() => {
       router.removeEventListener("popstate", onPopstate);
@@ -176,6 +205,7 @@ function matchRoutes(
       return {
         route,
         params,
+        pathname,
       };
     }
   }
@@ -184,16 +214,19 @@ function matchRoutes(
   return undefined;
 }
 
-export const BrowserRouter = component(
-  "alfama-router.Browser",
-  (props, { setContext, signal }) => {
-    setContext(
-      RouterContext,
-      signal("router", createRouter(window.history, window.location))
-    );
-    return props.children;
-  }
-);
+export const BrowserRouter = component<{
+  router?: RouterObject;
+  children: VElement | VElement[];
+}>("alfama-router.Browser", (props, { setContext, signal }) => {
+  setContext(
+    RouterContext,
+    signal(
+      "router",
+      props.router || createRouter(window.history, window.location)
+    )
+  );
+  return <Fragment>{props.children}</Fragment>;
+});
 
 export const StaticRouter = component("alfama-router.Static", (props) => {
   return props.children;
@@ -214,9 +247,9 @@ export const Link = component<
         if (!$router) {
           throw new Error("Please define root router");
         }
-        const r = $router();
+        const r = $router.get();
         const href =
-          typeof props.href === "function" ? props.href() : props.href;
+          typeof props.href === "object" ? props.href.run() : props.href;
         if (href) r.pushState({}, "", href);
         if (props.onClick) {
           // why

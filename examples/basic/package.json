@@ -5,7 +5,9 @@
   "type": "module",
   "main": "src/main.tsx",
   "scripts": {
+    "typecheck": "pwd",
     "dev": "vite",
+    "test": "npx vitest --run --passWithNoTests",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -16,6 +18,6 @@
   },
   "devDependencies": {
     "typescript": "^5.2.2",
-    "vite": "^5.1.5"
+    "vitest": "^2.0.5"
   }
 }
